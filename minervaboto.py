@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from bs4 import BeautifulSoup
+from urllib.parse import urlencode
 import requests
 import sys
 import os
@@ -23,16 +24,17 @@ def get_input_named(form, name):
 # Main
 #
 
+# NOTE(erick): Getting user id and password
 if not ('MINERVA_ID' in os.environ and
         'MINERVA_PASS' in os.environ):
     print('Please, set your \'MINERVA_ID\' and \'MINERVA_PASS\' environment variables.', file=sys.stderr)
     sys.exit(1)
 
-
 user_id = os.environ['MINERVA_ID']
 user_password = os.environ['MINERVA_PASS']
 
 
+# NOTE(erick): Loading the front-page and looking for the login link
 url = 'https://minerva.ufrj.br/F'
 
 response = requests.get(url)
@@ -50,6 +52,7 @@ if login_link == None:
     print('Unable to find login link', file=sys.stderr)
     sys.exit(1)
 
+# NOTE(erick): Searching for the login form.
 response = requests.get(login_link.get('href'))
 soup = BeautifulSoup(response.text, default_parser)
 
@@ -74,5 +77,11 @@ payload = {
 }
 
 response = requests.post(action, data=payload)
+
+# NOTE(erick): Going to the borrowed books page.
+params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
+url = action + "?" + params
+
+response = requests.get(url)
 
 print(response.text)
