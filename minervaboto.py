@@ -13,9 +13,9 @@ default_parser = 'html.parser'
 #
 
 def get_input_named(form, name):
-    for _input in form.find_all('input'):
-        if _input.get('name') == name:
-            return _input.get('value')
+    result = form.find('input', {'name' : name})
+    if result:
+        return result.get('value')
 
     return None
 
