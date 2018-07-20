@@ -95,6 +95,8 @@ url = action + "?" + params
 response = requests.get(url)
 
 #NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
+soup = BeautifulSoup(response.text, default_parser)
+
 renew_link = None
 for link in soup.find_all('a'):
     link_text = link.getText().strip()
