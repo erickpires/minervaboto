@@ -48,8 +48,9 @@ user_password = os.environ['MINERVA_PASS']
 url = 'https://minerva.ufrj.br/F'
 
 response = requests.get(url)
-soup = BeautifulSoup(response.text, default_parser)
+assert response.status_code == 200
 
+soup = BeautifulSoup(response.text, default_parser)
 login_link = None
 for link in soup.find_all('a'):
     link_text = link.getText().strip()
@@ -64,8 +65,9 @@ if login_link == None:
 
 # NOTE(erick): Searching for the login form.
 response = requests.get(login_link.get('href'))
-soup = BeautifulSoup(response.text, default_parser)
+assert response.status_code == 200
 
+soup = BeautifulSoup(response.text, default_parser)
 form = soup.find('form')
 assert form.get('name') == 'form1'
 
@@ -73,6 +75,9 @@ action = form.get('action')
 func         = get_input_named(form, 'func')
 bor_library  = get_input_named(form, 'bor_library')
 
+assert action
+assert func
+assert bor_library
 # print("Action: " + action)
 # print("func: "         + func)
 # print("bor_library: "  + bor_library)
@@ -87,12 +92,14 @@ payload = {
 }
 
 response = requests.post(action, data=payload)
+assert response.status_code == 200
 
 # NOTE(erick): Going to the borrowed books page.
 params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
 url = action + "?" + params
 
 response = requests.get(url)
+assert response.status_code == 200
 
 #NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
 soup = BeautifulSoup(response.text, default_parser)
@@ -111,5 +118,6 @@ if renew_link == None:
 
 url = get_link_from_js_replace_page(renew_link.get('href'))
 response = requests.get(url)
+assert response.status_code == 200
 
 print(response.text)
