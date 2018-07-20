@@ -19,7 +19,17 @@ def get_input_named(form, name):
 
     return None
 
+def get_link_from_js_replace_page(link):
+    if link.startswith('http'):
+        return link
+    if not link.startswith('javascript:replacePage('):
+        print('Error: No JS replacePage', file=sys.stderr)
+        sys.exit(2)
 
+    rst = link.replace('javascript:replacePage(\'', '')
+    rst = rst.replace('\');', '')
+
+    return rst
 #
 # Main
 #
@@ -82,6 +92,22 @@ response = requests.post(action, data=payload)
 params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
 url = action + "?" + params
 
+response = requests.get(url)
+
+#NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
+renew_link = None
+for link in soup.find_all('a'):
+    link_text = link.getText().strip()
+
+    if link_text == 'Renovar Todos':
+        renew_link = link
+        break
+
+if renew_link == None:
+    print('You don\'t have books to be renewed')
+    sys.exit(0)
+
+url = get_link_from_js_replace_page(renew_link.get('href'))
 response = requests.get(url)
 
 print(response.text)
