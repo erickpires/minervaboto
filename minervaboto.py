@@ -59,7 +59,7 @@ for link in soup.find_all('a'):
         login_link = link
         break
 
-if login_link == None:
+if not login_link:
     print('Unable to find login link', file=sys.stderr)
     sys.exit(1)
 
@@ -112,7 +112,7 @@ for link in soup.find_all('a'):
         renew_link = link
         break
 
-if renew_link == None:
+if not renew_link:
     print('You don\'t have books to be renewed')
     sys.exit(0)
 
