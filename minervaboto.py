@@ -147,7 +147,7 @@ def main():
         print("Você não tem livros para renovar")
         return
 
-    for book in books:
+    for book in renewed:
         print('Nome: ' + book['name'])
         print('\Devolução: ' + datetime.strftime(book['return_in'], '%d/%m/%y'))
         print('\tBiblioteca: ' + book['library'])
