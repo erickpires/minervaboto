@@ -147,12 +147,13 @@ def main():
         print("Você não tem livros para renovar")
         return
 
-    for book in renewed:
-        print('Nome: ' + book['name'])
-        print('\Devolução: ' + datetime.strftime(book['return_in'], '%d/%m/%y'))
-        print('\tBiblioteca: ' + book['library'])
+
+    for idx, book in enumerate(renewed):
+        print('{}. '.format(idx + 1) + book['name'])
+        print('    Devolução: ' + datetime.strftime(book['return_in'], '%d / %m / %Y'))
+        print('    Biblioteca: ' + book['library'])
         if book['issues']:
-            print('\tObservações: ' + book['issues'])
+            print('    Observações: ' + book['issues'])
         print('')
 
 
