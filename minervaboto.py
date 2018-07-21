@@ -30,8 +30,7 @@ def get_link_from_js_replace_page(link):
     if link.startswith('http'):
         return link
     if not link.startswith('javascript:replacePage('):
-        print('Error: No JS replacePage', file=sys.stderr)
-        sys.exit(2)
+        raise ValueError('Error: No JS replacePage')
 
     rst = link.replace('javascript:replacePage(\'', '')
     rst = rst.replace('\');', '')
@@ -53,8 +52,7 @@ def renew_books(url, user_id, user_password):
             break
 
     if not login_link:
-        print('Unable to find login link', file=sys.stderr)
-        sys.exit(1)
+        raise ValueError('Unable to find login link')
 
     # NOTE(erick): Searching for the login form.
     response = requests.get(login_link.get('href'))
