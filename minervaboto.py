@@ -149,11 +149,11 @@ def main():
         return
 
     for book in books:
-        print('Nome: ', end=book['name'])
-        print('\tVencimento : ', end=datetime.strftime(book['return_in'], '%d/%m/%y'))
-        print('\tBiblioteca: ', end=book['library'])
+        print('Nome: ' + book['name'])
+        print('\Devolução: ' + datetime.strftime(book['return_in'], '%d/%m/%y'))
+        print('\tBiblioteca: ' + book['library'])
         if book['issues']:
-            print('\tObservações: ', end=book['issues'])
+            print('\tObservações: ' + book['issues'])
         print('')
 
 
