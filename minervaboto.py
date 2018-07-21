@@ -30,94 +30,96 @@ def get_link_from_js_replace_page(link):
     rst = rst.replace('\');', '')
 
     return rst
-#
-# Main
-#
 
-# NOTE(erick): Getting user id and password
-if not ('MINERVA_ID' in os.environ and
-        'MINERVA_PASS' in os.environ):
-    print('Please, set your \'MINERVA_ID\' and \'MINERVA_PASS\' environment variables.', file=sys.stderr)
-    sys.exit(1)
+def renew_books(url, user_id, user_password):
+    # NOTE(erick): Loading the front-page and looking for the login link
+    response = requests.get(url)
+    assert response.status_code == 200
 
-user_id = os.environ['MINERVA_ID']
-user_password = os.environ['MINERVA_PASS']
+    soup = BeautifulSoup(response.text, default_parser)
+    login_link = None
+    for link in soup.find_all('a'):
+        link_text = link.getText().strip()
 
+        if link_text == 'Login':
+            login_link = link
+            break
 
-# NOTE(erick): Loading the front-page and looking for the login link
-url = 'https://minerva.ufrj.br/F'
+    if not login_link:
+        print('Unable to find login link', file=sys.stderr)
+        sys.exit(1)
 
-response = requests.get(url)
-assert response.status_code == 200
+    # NOTE(erick): Searching for the login form.
+    response = requests.get(login_link.get('href'))
+    assert response.status_code == 200
 
-soup = BeautifulSoup(response.text, default_parser)
-login_link = None
-for link in soup.find_all('a'):
-    link_text = link.getText().strip()
+    soup = BeautifulSoup(response.text, default_parser)
+    form = soup.find('form')
+    assert form.get('name') == 'form1'
 
-    if link_text == 'Login':
-        login_link = link
-        break
+    action = form.get('action')
+    func         = get_input_named(form, 'func')
+    bor_library  = get_input_named(form, 'bor_library')
 
-if not login_link:
-    print('Unable to find login link', file=sys.stderr)
-    sys.exit(1)
+    assert action
+    assert func
+    assert bor_library
+    # print("Action: " + action)
+    # print("func: "         + func)
+    # print("bor_library: "  + bor_library)
 
-# NOTE(erick): Searching for the login form.
-response = requests.get(login_link.get('href'))
-assert response.status_code == 200
+    payload = {
+        'func' : func,
+        'bor_id' : user_id,
+        'bor_verification' : user_password,
+        'bor_library' : bor_library,
+        'x' : '0',
+        'y' : '0'
+    }
 
-soup = BeautifulSoup(response.text, default_parser)
-form = soup.find('form')
-assert form.get('name') == 'form1'
+    response = requests.post(action, data=payload)
+    assert response.status_code == 200
 
-action = form.get('action')
-func         = get_input_named(form, 'func')
-bor_library  = get_input_named(form, 'bor_library')
+    # NOTE(erick): Going to the borrowed books page.
+    params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
+    url = action + "?" + params
 
-assert action
-assert func
-assert bor_library
-# print("Action: " + action)
-# print("func: "         + func)
-# print("bor_library: "  + bor_library)
+    response = requests.get(url)
+    assert response.status_code == 200
 
-payload = {
-    'func' : func,
-    'bor_id' : user_id,
-    'bor_verification' : user_password,
-    'bor_library' : bor_library,
-    'x' : '0',
-    'y' : '0'
-}
+    # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
+    soup = BeautifulSoup(response.text, default_parser)
 
-response = requests.post(action, data=payload)
-assert response.status_code == 200
+    renew_link = None
+    for link in soup.find_all('a'):
+        link_text = link.getText().strip()
 
-# NOTE(erick): Going to the borrowed books page.
-params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
-url = action + "?" + params
+        if link_text == 'Renovar Todos':
+            renew_link = link
+            break
 
-response = requests.get(url)
-assert response.status_code == 200
+    if not renew_link:
+        print('You don\'t have books to be renewed')
+        sys.exit(0)
 
-#NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
-soup = BeautifulSoup(response.text, default_parser)
+    url = get_link_from_js_replace_page(renew_link.get('href'))
+    response = requests.get(url)
+    assert response.status_code == 200
 
-renew_link = None
-for link in soup.find_all('a'):
-    link_text = link.getText().strip()
+    print(response.text)
 
-    if link_text == 'Renovar Todos':
-        renew_link = link
-        break
+def main():
+    # NOTE(erick): Getting user id and password
+    if not ('MINERVA_ID' in os.environ and
+            'MINERVA_PASS' in os.environ):
+        print('Please, set your \'MINERVA_ID\' and \'MINERVA_PASS\' environment variables.', file=sys.stderr)
+        sys.exit(1)
 
-if not renew_link:
-    print('You don\'t have books to be renewed')
-    sys.exit(0)
+    user_id = os.environ['MINERVA_ID']
+    user_password = os.environ['MINERVA_PASS']
+    url = 'https://minerva.ufrj.br/F'
 
-url = get_link_from_js_replace_page(renew_link.get('href'))
-response = requests.get(url)
-assert response.status_code == 200
+    renew_books(url, user_id, user_password)
 
-print(response.text)
+if __name__ == '__main__':
+    main()
