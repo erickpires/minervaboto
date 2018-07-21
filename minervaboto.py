@@ -19,6 +19,13 @@ def get_input_named(form, name):
 
     return None
 
+def find_tag_containing_text(soup, tag, text):
+    for item in soup.find_all(tag):
+        if text in item.getText():
+            return item
+
+    return None
+
 def get_link_from_js_replace_page(link):
     if link.startswith('http'):
         return link
@@ -64,9 +71,6 @@ def renew_books(url, user_id, user_password):
     assert action
     assert func
     assert bor_library
-    # print("Action: " + action)
-    # print("func: "         + func)
-    # print("bor_library: "  + bor_library)
 
     payload = {
         'func' : func,
@@ -99,14 +103,33 @@ def renew_books(url, user_id, user_password):
             break
 
     if not renew_link:
-        print('You don\'t have books to be renewed')
-        sys.exit(0)
+        return []
 
     url = get_link_from_js_replace_page(renew_link.get('href'))
     response = requests.get(url)
     assert response.status_code == 200
 
-    print(response.text)
+    soup = BeautifulSoup(response.text, default_parser)
+    table = find_tag_containing_text(soup, 'table', 'Devolver em')
+    assert table
+
+    # NOTE(erick): Parsing the information table.
+    books = []
+    for rows in table.find_all('tr'):
+        cells = rows.find_all('td')
+        if len(cells) == 0:
+            continue
+
+        book = {}
+        book['name'] = cells[1].getText()
+        book['status'] = cells[2].getText()
+        book['return_in'] = datetime.strptime(cells[3].getText(), '%d/%m/%y')
+        book['library'] = cells[5].getText()
+        book['issues'] = cells[8].getText()
+
+        books.append(book)
+
+    return books
 
 def main():
     # NOTE(erick): Getting user id and password
@@ -119,7 +142,20 @@ def main():
     user_password = os.environ['MINERVA_PASS']
     url = 'https://minerva.ufrj.br/F'
 
-    renew_books(url, user_id, user_password)
+    renewed = renew_books(url, user_id, user_password)
+
+    if len(renewed) == 0:
+        print("Você não tem livros para renovar")
+        return
+
+    for book in books:
+        print('Nome: ', end=book['name'])
+        print('\tVencimento : ', end=datetime.strftime(book['return_in'], '%d/%m/%y'))
+        print('\tBiblioteca: ', end=book['library'])
+        if book['issues']:
+            print('\tObservações: ', end=book['issues'])
+        print('')
+
 
 if __name__ == '__main__':
     main()
