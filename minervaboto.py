@@ -38,7 +38,7 @@ def get_link_from_js_replace_page(link):
 
     return rst
 
-def renew_books(url, user_id, user_password):
+def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     # NOTE(erick): Loading the front-page and looking for the login link
     response = requests.get(url)
     assert response.status_code == 200
@@ -141,7 +141,7 @@ def main():
     user_password = os.environ['MINERVA_PASS']
     url = 'https://minerva.ufrj.br/F'
 
-    renewed = renew_books(url, user_id, user_password)
+    renewed = renew_books(user_id, user_password, url)
 
     if len(renewed) == 0:
         print("Você não tem livros para renovar")
