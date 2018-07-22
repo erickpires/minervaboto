@@ -43,7 +43,7 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     response = requests.get(url)
     assert response.status_code == 200
 
-    soup = BeautifulSoup(response.text, default_parser)
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     login_link = None
     for link in soup.find_all('a'):
         link_text = link.getText().strip()
@@ -59,7 +59,7 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     response = requests.get(login_link.get('href'))
     assert response.status_code == 200
 
-    soup = BeautifulSoup(response.text, default_parser)
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     form = soup.find('form')
     assert form.get('name') == 'form1'
 
@@ -91,7 +91,7 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     assert response.status_code == 200
 
     # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
-    soup = BeautifulSoup(response.text, default_parser)
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
 
     renew_link = None
     for link in soup.find_all('a'):
@@ -108,7 +108,7 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     response = requests.get(url)
     assert response.status_code == 200
 
-    soup = BeautifulSoup(response.text, default_parser)
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     table = find_tag_containing_text(soup, 'table', 'Devolver em')
     assert table
 
