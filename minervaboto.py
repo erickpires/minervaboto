@@ -130,6 +130,20 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
 
     return books
 
+def print_books(books):
+    if len(books) == 0:
+        print("Você não tem livros para renovar")
+        return
+
+
+    for idx, book in enumerate(books):
+        print('{}. '.format(idx + 1) + book['name'])
+        print('    Devolução: ' + datetime.strftime(book['return_in'], '%d / %m / %Y'))
+        print('    Biblioteca: ' + book['library'])
+        if book['issues']:
+            print('    Observações: ' + book['issues'])
+        print('')
+
 def main():
     # NOTE(erick): Getting user id and password
     if not ('MINERVA_ID' in os.environ and
@@ -143,18 +157,7 @@ def main():
 
     renewed = renew_books(user_id, user_password, url)
 
-    if len(renewed) == 0:
-        print("Você não tem livros para renovar")
-        return
-
-
-    for idx, book in enumerate(renewed):
-        print('{}. '.format(idx + 1) + book['name'])
-        print('    Devolução: ' + datetime.strftime(book['return_in'], '%d / %m / %Y'))
-        print('    Biblioteca: ' + book['library'])
-        if book['issues']:
-            print('    Observações: ' + book['issues'])
-        print('')
+    print_books(renewed)
 
 
 if __name__ == '__main__':
