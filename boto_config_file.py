@@ -3,6 +3,7 @@
 from appdirs import user_config_dir
 from os import path
 import minervaboto
+import configparser
 import os
 import sys
 
@@ -14,36 +15,37 @@ def main():
     if not path.exists(boto_cfg_path):
         os.makedirs(boto_cfg_path)
 
+    config = configparser.ConfigParser(default_section="LOGIN")
+    config.read(config_file_path)
+
     if not path.exists(config_file_path):
         ans = input('You don\'t have a config file. Do you want to enter' +
-                    ' your credentials here? [y/N]')
-        if not 'y' in ans:
-            print('Ok. Please enter your id and password in: \n\t[{}]'.
-                  format(config_file_path))
+                    ' your credentials here? [y/N] ')
+        if not ans.lower() in ['y', 'yes']:
+            print('Ok. Please enter your id and password in: \n\t[%s]' %
+                  config_file_path)
+            config["LOGIN"]["MINERVA_ID"] = ''
+            config["LOGIN"]["MINERVA_PASS"] = ''
+            with open(config_file_path, 'w') as f:
+                config.write(f)
             sys.exit(0)
 
-        m_id = input('Enter your id:')
-        passwd = input('Enter your password (Plain-text): ')
+        config["LOGIN"]["MINERVA_ID"] = input('Enter your id: ')
+        config["LOGIN"]["MINERVA_PASS"] = input('Enter your password (plain-text): ')
 
         with open(config_file_path, 'w') as f:
-            print('MINERVA_ID = {}'.format(m_id), file=f)
-            print('MINERVA_PASS = {}'.format(passwd), file=f)
+            config.write(f)
 
-        print('Thanks')
+        print('File saved. Continuing...\n')
 
-    user_id = None
-    user_password = None
-    with open(config_file_path) as input_file:
-        for line in input_file:
-            if 'MINERVA_ID =' in line:
-                user_id = line.replace('MINERVA_ID =', '').strip()
-            if 'MINERVA_PASS =' in line:
-                user_password = line.replace('MINERVA_PASS =', ''.strip())
-
-    if not user_id or not user_password:
-        print('Config file has invalid content. Please verify it.')
+    try:
+        user_id = config["LOGIN"]["MINERVA_ID"]
+        user_password = config["LOGIN"]["MINERVA_PASS"]
+        if not user_id or not user_password: raise(KeyError)
+    except KeyError:
+        print('Config file is incomplete. Please verify it in: \n\t[%s]' %
+              config_file_path)
         sys.exit(1)
-
 
     url = 'https://minerva.ufrj.br/F'
     renewed = minervaboto.renew_books(user_id, user_password, url)
