@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from xdg import XDG_CONFIG_HOME
+from appdirs import user_config_dir
 from os import path
 import minervaboto
 import os
@@ -8,7 +8,7 @@ import sys
 
 
 def main():
-    boto_cfg_path = path.join(XDG_CONFIG_HOME, 'minervaboto')
+    boto_cfg_path = user_config_dir('minervaboto')
     config_file_path = path.join(boto_cfg_path, 'boto.conf')
 
     if not path.exists(boto_cfg_path):
