@@ -38,6 +38,41 @@ def get_link_from_js_replace_page(link):
 
     return rst
 
+def parse_table(soup, books=[]):
+    table = find_tag_containing_text(soup, 'table', 'Devolver em')
+    assert table
+    header = [th.getText().strip() for th in table.find_all('th')]
+    pos = 0
+    for rows in table.find_all('tr'):
+        cells = [row.getText() for row in rows.find_all('td')]
+        if len(cells) == 0: continue
+        book = {} if len(books) == pos else books[pos]
+        book['name'] = cells[header.index('Título' if 'Título' in header else 'Descrição')]
+        if book['name'][-1] in ['.', ';', '/']:
+            book['name'] = book['name'][:-1].strip()
+        if 'Status do item' in header:
+            book['status'] = cells[header.index('Status do item')]
+        return_time = cells[header.index('Devolver em')]
+        if 'Hora' in header:
+            return_time += '  ' + cells[header.index('Hora')]
+        return_time = datetime.strptime(return_time, '%d/%m/%y  %H:%M')
+        if 'return_until' in book and return_time > book['return_until']:
+            book['renewed_for'] = return_time - book['return_until']
+        else:
+            book['renewed_for'] = None
+        book['return_until'] = return_time
+        book['library'] = cells[header.index('Biblioteca')]
+        if 'Número de renovações' in header:
+            book['renewal_count'] = int(cells[header.index('Número de renovações')].split()[0])
+        if 'Observação' in header:
+            book['issues'] = cells[header.index('Observação')]
+        elif  'Motivo para não renovação' in header:
+            book['issues'] = cells[header.index('Motivo para não renovação')]
+
+        if len(books) == pos: books.append(book)
+        pos += 1
+    return books
+
 def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     # NOTE(erick): Loading the front-page and looking for the login link
     response = requests.get(url)
@@ -90,9 +125,11 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     response = requests.get(url)
     assert response.status_code == 200
 
-    # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
+    # NOTE(ian): Parsing the information table in the borrowed books page.
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
+    books = parse_table(soup)
 
+    # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
     renew_link = None
     for link in soup.find_all('a'):
         link_text = link.getText().strip()
@@ -108,25 +145,9 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     response = requests.get(url)
     assert response.status_code == 200
 
+    # NOTE(ian): Parsing the information table in the results page.
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
-    table = find_tag_containing_text(soup, 'table', 'Devolver em')
-    assert table
-
-    # NOTE(erick): Parsing the information table.
-    books = []
-    for rows in table.find_all('tr'):
-        cells = rows.find_all('td')
-        if len(cells) == 0:
-            continue
-
-        book = {}
-        book['name'] = cells[1].getText()
-        book['status'] = cells[2].getText()
-        book['return_in'] = datetime.strptime(cells[3].getText(), '%d/%m/%y')
-        book['library'] = cells[5].getText()
-        book['issues'] = cells[8].getText()
-
-        books.append(book)
+    books = parse_table(soup, books)
 
     return books
 
@@ -135,14 +156,31 @@ def print_books(books):
         print("Você não tem livros para renovar")
         return
 
+    total_renewed = 0
+    next_renewal = None
 
     for idx, book in enumerate(books):
-        print('{}. '.format(idx + 1) + book['name'])
-        print('    Devolução: ' + datetime.strftime(book['return_in'], '%d / %m / %Y'))
-        print('    Biblioteca: ' + book['library'])
+        if book['renewed_for']:
+            total_renewed += 1
+            renewed_for = ' (+%i dia%s)' % (book['renewed_for'].days,
+                's' if book['renewed_for'].days > 1 else '')
+        if not next_renewal or book['return_until'] < next_renewal:
+            next_renewal = book['return_until']
+        print('%i.\t%s' % (idx + 1, book['name']))
+        print('\tDevolução: %s%s' %
+            (datetime.strftime(book['return_until'], '%d/%m/%Y'),
+             renewed_for if book['renewed_for'] else '')
+        )
+        print('\tBiblioteca: ' + book['library'])
         if book['issues']:
-            print('    Observações: ' + book['issues'])
+            print('\tObservações: ' + book['issues'])
         print('')
+
+    print('%s livro%s renovado%s. Data mais próxima para devolução: %s.' %
+        (str(total_renewed) if total_renewed > 0 else 'Nenhum',
+         's' if total_renewed > 1 else '', 's' if total_renewed > 1 else '',
+         datetime.strftime(book['return_until'], '%d/%m/%Y'))
+    )
 
 def main():
     # NOTE(erick): Getting user id and password
