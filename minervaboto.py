@@ -52,6 +52,8 @@ def parse_table(soup, books=[]):
             book['name'] = book['name'][:-1].strip()
         if 'Status do item' in header:
             book['status'] = cells[header.index('Status do item')]
+        if 'Autor' in header:
+            book['author'] = cells[header.index('Autor')]
         return_time = cells[header.index('Devolver em')]
         if 'Hora' in header:
             return_time += '  ' + cells[header.index('Hora')]
