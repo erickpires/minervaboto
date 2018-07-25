@@ -81,13 +81,7 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     assert response.status_code == 200
 
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
-    login_link = None
-    for link in soup.find_all('a'):
-        link_text = link.getText().strip()
-
-        if link_text == 'Login':
-            login_link = link
-            break
+    login_link = find_tag_containing_text(soup, 'a', 'Login')
 
     if not login_link:
         raise ValueError('Unable to find login link')
@@ -119,6 +113,12 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
 
     response = requests.post(action, data=payload)
     assert response.status_code == 200
+
+    # NOTE(ian): Checking if the login was successful.
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
+    if find_tag_containing_text(soup, 'a', 'Login'):
+        message = soup.find_all('td', class_='feedbackbar')[0]
+        raise ValueError(message.getText().strip())
 
     # NOTE(erick): Going to the borrowed books page.
     params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
