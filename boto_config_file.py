@@ -13,7 +13,9 @@ def write_config_file(config, config_file_path):
         config.write(f)
 
 def input_login_info(config, config_file_path, operation):
-    config['LOGIN']['MINERVA_ID'] = input('ID/CPF: ')
+    user_id = config['LOGIN']['MINERVA_ID']
+    config['LOGIN']['MINERVA_ID'] = str(
+        input('ID/CPF%s: ' % (' [%s]' % user_id if user_id else '')) or user_id)
     config['LOGIN']['MINERVA_PASS'] = getpass('Senha: ')
 
     write_config_file(config, config_file_path)
