@@ -27,11 +27,15 @@ def find_tag_containing_text(soup, tag, text):
 
     return None
 
+def get_return_dict(code, message=None, result=None):
+    if not message: message = requests.status_codes._codes[code][0]
+    return {'response': {'code': code, 'message': message}, 'result': result}
+
 def get_link_from_js_replace_page(link):
     if link.startswith('http'):
         return link
     if not link.startswith('javascript:replacePage('):
-        raise ValueError('Error: No JS replacePage')
+        return None
 
     rst = link.replace('javascript:replacePage(\'', '')
     rst = rst.replace('\');', '')
@@ -40,7 +44,7 @@ def get_link_from_js_replace_page(link):
 
 def parse_table(soup, books=[]):
     table = find_tag_containing_text(soup, 'table', 'Devolver em')
-    assert table
+    if not table: return get_return_dict(422, 'Unable to find table')
     header = [th.getText().strip() for th in table.find_all('th')]
     pos = 0
     for rows in table.find_all('tr'):
@@ -52,6 +56,8 @@ def parse_table(soup, books=[]):
             book['name'] = book['name'][:-1].strip()
         if 'Status do item' in header:
             book['status'] = cells[header.index('Status do item')]
+        if 'Autor' in header:
+            book['author'] = cells[header.index('Autor')]
         return_time = cells[header.index('Devolver em')]
         if 'Hora' in header:
             return_time += '  ' + cells[header.index('Hora')]
@@ -76,35 +82,27 @@ def parse_table(soup, books=[]):
 def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     # NOTE(erick): Loading the front-page and looking for the login link
     response = requests.get(url)
-    assert response.status_code == 200
+    if response.status_code != 200: return get_return_dict(response.status_code)
 
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
-    login_link = None
-    for link in soup.find_all('a'):
-        link_text = link.getText().strip()
+    login_link = find_tag_containing_text(soup, 'a', 'Login')
 
-        if link_text == 'Login':
-            login_link = link
-            break
-
-    if not login_link:
-        raise ValueError('Unable to find login link')
+    if not login_link: return get_return_dict(422, 'Unable to find login link')
 
     # NOTE(erick): Searching for the login form.
     response = requests.get(login_link.get('href'))
-    assert response.status_code == 200
+    if response.status_code != 200: return get_return_dict(response.status_code)
 
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     form = soup.find('form')
-    assert form.get('name') == 'form1'
+    if not form.get('name') == 'form1':
+        return get_return_dict(422, 'Unable to find form')
 
     action = form.get('action')
-    func         = get_input_named(form, 'func')
-    bor_library  = get_input_named(form, 'bor_library')
+    func = get_input_named(form, 'func')
+    bor_library = get_input_named(form, 'bor_library')
 
-    assert action
-    assert func
-    assert bor_library
+    if not (action and func and bor_library): return get_return_dict(422)
 
     payload = {
         'func' : func,
@@ -116,14 +114,20 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     }
 
     response = requests.post(action, data=payload)
-    assert response.status_code == 200
+    if response.status_code != 200: return get_return_dict(response.status_code)
+
+    # NOTE(ian): Checking if the login was successful.
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
+    if find_tag_containing_text(soup, 'a', 'Login'):
+        message = soup.find_all('td', class_='feedbackbar')[0]
+        return get_return_dict(401, message.getText().strip())
 
     # NOTE(erick): Going to the borrowed books page.
     params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
     url = action + "?" + params
 
     response = requests.get(url)
-    assert response.status_code == 200
+    if response.status_code != 200: return get_return_dict(response.status_code)
 
     # NOTE(ian): Parsing the information table in the borrowed books page.
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
@@ -139,23 +143,21 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
             break
 
     if not renew_link:
-        return []
+        return get_return_dict(response.status_code,
+            'Você não tem livros para renovar', None)
 
     url = get_link_from_js_replace_page(renew_link.get('href'))
+    if not url: return get_return_dict(422, 'No JS replacePage')
     response = requests.get(url)
-    assert response.status_code == 200
+    if response.status_code != 200: return get_return_dict(response.status_code)
 
     # NOTE(ian): Parsing the information table in the results page.
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     books = parse_table(soup, books)
 
-    return books
+    return get_return_dict(200, None, books)
 
 def print_books(books):
-    if len(books) == 0:
-        print("Você não tem livros para renovar")
-        return
-
     total_renewed = 0
     next_renewal = None
 
@@ -194,9 +196,10 @@ def main():
     url = 'https://minerva.ufrj.br/F'
 
     renewed = renew_books(user_id, user_password, url)
-
-    print_books(renewed)
-
+    if renewed['result']:
+        print_books(renewed['result'])
+    else:
+        print(renewed['response']['message'])
 
 if __name__ == '__main__':
     main()

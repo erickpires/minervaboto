@@ -11,6 +11,9 @@ def main():
     url = 'https://minerva.ufrj.br/F'
     renewed = minervaboto.renew_books(sys.argv[1], sys.argv[2], url)
 
-    minervaboto.print_books(renewed)
+    if renewed['result']:
+        minervaboto.print_books(renewed['result'])
+    else:
+        print(renewed['response']['message'])
 if __name__ == '__main__':
     main()
