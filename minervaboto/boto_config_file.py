@@ -21,7 +21,7 @@ def input_login_info(config, config_file_path, operation):
     write_config_file(config, config_file_path)
     print('Arquivo %s. Continuando...\n' % operation)
 
-def main():
+def config_file():
     boto_cfg_path = user_config_dir('minervaboto')
     config_file_path = path.join(boto_cfg_path, 'boto.conf')
 
@@ -64,6 +64,3 @@ def main():
             input_login_info(config, config_file_path, 'atualizado')
         else:
             break
-
-if __name__ == '__main__':
-    main()

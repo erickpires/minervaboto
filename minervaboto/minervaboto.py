@@ -183,23 +183,3 @@ def print_books(books):
          's' if total_renewed > 1 else '', 's' if total_renewed > 1 else '',
          datetime.strftime(book['return_until'], '%d/%m/%Y'))
     )
-
-def main():
-    # NOTE(erick): Getting user id and password
-    if not ('MINERVA_ID' in os.environ and
-            'MINERVA_PASS' in os.environ):
-        print('Please, set your \'MINERVA_ID\' and \'MINERVA_PASS\' environment variables.', file=sys.stderr)
-        sys.exit(1)
-
-    user_id = os.environ['MINERVA_ID']
-    user_password = os.environ['MINERVA_PASS']
-    url = 'https://minerva.ufrj.br/F'
-
-    renewed = renew_books(user_id, user_password, url)
-    if renewed['result']:
-        print_books(renewed['result'])
-    else:
-        print(renewed['response']['message'])
-
-if __name__ == '__main__':
-    main()
