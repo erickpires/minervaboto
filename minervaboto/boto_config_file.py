@@ -55,10 +55,7 @@ def config_file():
         url = 'https://minerva.ufrj.br/F'
         renewed = minervaboto.renew_books(login['MINERVA_ID'], login['MINERVA_PASS'], url)
 
-        if renewed['result']:
-            minervaboto.print_books(renewed['result'])
-        else:
-            print(renewed['response']['message'])
+        print(minervaboto.renewed_to_string(renewed))
 
         if renewed['response']['code'] == 401:
             input_login_info(config, config_file_path, 'atualizado')

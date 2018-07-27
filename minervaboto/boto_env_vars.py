@@ -16,7 +16,4 @@ def env_vars():
     url = 'https://minerva.ufrj.br/F'
 
     renewed = minervaboto.renew_books(user_id, user_password, url)
-    if renewed['result']:
-        minervaboto.print_books(renewed['result'])
-    else:
-        print(renewed['response']['message'])
+    print(minervaboto.renewed_to_string(renewed))

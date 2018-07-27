@@ -157,29 +157,41 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
 
     return get_return_dict(200, None, books)
 
-def print_books(books):
+def books_to_string(books):
     total_renewed = 0
     next_renewal = None
 
+    print(books)
+    print(type(books))
+    result = ""
     for idx, book in enumerate(books):
+        print(type(book))
         if book['renewed_for']:
             total_renewed += 1
             renewed_for = ' (+%i dia%s)' % (book['renewed_for'].days,
                 's' if book['renewed_for'].days > 1 else '')
         if not next_renewal or book['return_until'] < next_renewal:
             next_renewal = book['return_until']
-        print('%i.\t%s' % (idx + 1, book['name']))
-        print('\tDevolução: %s%s' %
+        result = result + ('%i.\t%s' % (idx + 1, book['name'])) + '\n'
+        result = result + ('\tDevolução: %s%s' %
             (datetime.strftime(book['return_until'], '%d/%m/%Y'),
              renewed_for if book['renewed_for'] else '')
-        )
-        print('\tBiblioteca: ' + book['library'])
+        ) + '\n'
+        result = result + ('\tBiblioteca: ' + book['library']) + '\n'
         if book['issues']:
-            print('\tObservações: ' + book['issues'])
+            result = result + ('\tObservações: ' + book['issues']) + '\n'
         print('')
 
-    print('%s livro%s renovado%s. Data mais próxima para devolução: %s.' %
+    result = result + ('%s livro%s renovado%s. Data mais próxima para devolução: %s.' %
         (str(total_renewed) if total_renewed > 0 else 'Nenhum',
          's' if total_renewed > 1 else '', 's' if total_renewed > 1 else '',
          datetime.strftime(book['return_until'], '%d/%m/%Y'))
-    )
+    ) + '\n'
+
+    return result
+
+def renewed_to_string(renewed):
+    if renewed['result']:
+        return minervaboto.books_to_string(renewed['result'])
+    else:
+        return (renewed['response']['message'])
