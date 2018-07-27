@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from appdirs import user_config_dir
 from configparser import ConfigParser
 from getpass import getpass

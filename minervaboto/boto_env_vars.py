@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import minervaboto
 import os
 import sys
