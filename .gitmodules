@@ -1,3 +1,6 @@
 [submodule "aur-minervaboto"]
 	path = aur-minervaboto
 	url = ssh://aur@aur.archlinux.org/python-minervaboto.git
+[submodule "android_app"]
+	path = android_app
+	url = git@github.com:erickpires/minervaboto_android.git
