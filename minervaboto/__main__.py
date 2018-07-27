@@ -12,6 +12,8 @@ def main():
         args()
     elif len(sys.argv) == 2 and sys.argv[1] == '--config':
         config_file()
+    elif len(sys.argv) == 2 and sys.argv[1] == '--version':
+        print('1.0.4')
     elif len(sys.argv) == 1:
         env_vars()
     else:
