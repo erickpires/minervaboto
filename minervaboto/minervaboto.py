@@ -1,9 +1,7 @@
 from bs4 import BeautifulSoup
-from urllib.parse import urlencode
 from datetime import datetime
+from urllib.parse import urlencode
 import requests
-import sys
-import os
 
 default_parser = 'html.parser'
 

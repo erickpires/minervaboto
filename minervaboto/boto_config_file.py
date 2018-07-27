@@ -1,7 +1,6 @@
 from appdirs import user_config_dir
 from configparser import ConfigParser
 from getpass import getpass
-from os import path
 import minervaboto
 import os
 import sys
@@ -21,9 +20,9 @@ def input_login_info(config, config_file_path, operation):
 
 def config_file():
     boto_cfg_path = user_config_dir('minervaboto')
-    config_file_path = path.join(boto_cfg_path, 'boto.conf')
+    config_file_path = os.path.join(boto_cfg_path, 'boto.conf')
 
-    if not path.exists(boto_cfg_path):
+    if not os.path.exists(boto_cfg_path):
         os.makedirs(boto_cfg_path)
 
     config = ConfigParser(default_section='LOGIN')
@@ -33,7 +32,7 @@ def config_file():
     for required_key in ['MINERVA_ID', 'MINERVA_PASS']:
         if not required_key in login: login[required_key] = ''
 
-    if not path.exists(config_file_path):
+    if not os.path.exists(config_file_path):
         ans = input('Não encontramos um arquivo de configurações. Deseja ' +
                     'inserir os dados para login aqui? [s/N] ')
         if not ans.lower().strip() in ['s', 'sim']:
