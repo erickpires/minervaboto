@@ -12,8 +12,8 @@ setup(name='minervaboto',
       install_requires=[
           'appdirs',
           'beautifulsoup4',
-          'configparser'
-          'requests',
+          'configparser',
+          'requests'
       ],
       entry_points={
           'console_scripts': [

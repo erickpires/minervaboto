@@ -2,8 +2,9 @@
 
 from .minervaboto import renew_books, renewed_to_string
 from .utils import *
-import sys
 import os
+import pkg_resources
+import sys
 
 def do_renewal(user_id, user_pass, url):
     renewed = renew_books(user_id, user_pass, url)
@@ -55,7 +56,7 @@ def main():
     elif len(sys.argv) == 2 and sys.argv[1] == '--help':
         print_usage(executable, 0)
     elif len(sys.argv) == 2 and sys.argv[1] == '--version':
-        print('1.0.4')
+        print(pkg_resources.get_distribution('minervaboto').version)
         sys.exit(0)
     elif len(sys.argv) == 1:
         user_id, user_pass = get_env_vars(['MINERVA_ID', 'MINERVA_PASS'])
