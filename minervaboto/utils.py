@@ -35,10 +35,10 @@ def input_login_info(config, config_file, operation='atualizado'):
 
     return config['LOGIN']['MINERVA_ID'], config['LOGIN']['MINERVA_PASS']
 
-def get_info_from_config(config, fallback):
+def get_info_from_config(config):
     login = config['LOGIN']
     for required_key in ['MINERVA_ID', 'MINERVA_PASS']:
-        if not required_key in login: login[required_key] = fallback
+        if not required_key in login: login[required_key] = ''
     return [login['MINERVA_ID'], login['MINERVA_PASS']]
 
 def config_first_run(config, config_file):
@@ -51,6 +51,6 @@ def config_first_run(config, config_file):
         write_config_file(config, config_file)
         return False
 
-    get_info_from_config(config, '')
+    get_info_from_config(config)
     input_login_info(config, config_file, 'salvo')
     return True
