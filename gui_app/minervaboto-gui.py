@@ -53,12 +53,13 @@ class App:
         self.pass_entry = Entry(second_row)
         self.pass_entry.config(width=11, font=default_font, show="*")
         self.pass_entry.pack(side=RIGHT, padx=default_pad)
-
+        self.pass_entry.bind('<Return>', self.renew_callback)
 
         third_row = Frame(main_frame)
         third_row.pack(fill=X)
 
-        save_checkbox = Checkbutton(third_row, text='Salvar dados', variable=self.save_var)
+        save_checkbox = Checkbutton(third_row, text='Salvar dados',
+                                    variable=self.save_var)
         save_checkbox.config(font=default_font)
         save_checkbox.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
@@ -72,7 +73,7 @@ class App:
         renew_button.bind('<Return>', self.renew_callback)
         renew_button.focus_set()
 
-        self.fill_credentials()
+        self.save_var.set(self.fill_credentials())
 
         self.root.mainloop()
 
@@ -97,16 +98,17 @@ class App:
 
     def fill_credentials(self):
         config_file = utils.get_default_config_file('minervaboto', 'boto.conf')
-        if not os.path.exists(config_file): return
+        if not os.path.exists(config_file): return False
 
         config = utils.read_config_file(config_file)
         user_id, user_pass = utils.get_info_from_config(config)
 
-        if not (user_id and user_pass): return
+        if not (user_id and user_pass): return False
 
         self.id_entry.insert(0, user_id)
         self.pass_entry.insert(0, user_pass)
 
+        return True
     def save_credentials(self):
         if not self.save_var.get(): return
         config_file = utils.get_default_config_file('minervaboto', 'boto.conf')
