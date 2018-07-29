@@ -21,7 +21,7 @@ class App:
         self.root.resizable(False, False)
         self.root.bind('<Escape>', self.close)
 
-        self.save_var = IntVar()
+        self.var_save_credentials = IntVar()
 
         main_frame = Frame(self.root)
         main_frame.pack(expand=True, fill=BOTH)
@@ -59,7 +59,7 @@ class App:
         third_row.pack(fill=X)
 
         save_checkbox = Checkbutton(third_row, text='Salvar dados',
-                                    variable=self.save_var)
+                                    variable=self.var_save_credentials)
         save_checkbox.config(font=default_font)
         save_checkbox.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
@@ -67,13 +67,19 @@ class App:
         fourth_row = Frame(main_frame)
         fourth_row.pack(fill=X)
 
-        renew_button = Button(fourth_row, text='Renovar', command=self.renew_callback)
-        renew_button.config(font=default_font)
-        renew_button.pack(side=RIGHT, padx=default_pad, pady=default_pad)
-        renew_button.bind('<Return>', self.renew_callback)
-        renew_button.focus_set()
+        self.renew_button = Button(fourth_row, text='Renovar',
+                                   command=self.renew_callback)
+        self.renew_button.config(font=default_font)
+        self.renew_button.pack(side=RIGHT, padx=default_pad, pady=default_pad)
+        self.renew_button.bind('<Return>', self.renew_callback)
 
-        self.save_var.set(self.fill_credentials())
+        has_credentials = self.fill_credentials()
+        self.var_save_credentials.set(has_credentials)
+
+        if has_credentials:
+            self.renew_button.focus_set()
+        else:
+            self.id_entry.focus_set()
 
         self.root.mainloop()
 
@@ -110,7 +116,7 @@ class App:
 
         return True
     def save_credentials(self):
-        if not self.save_var.get(): return
+        if not self.var_save_credentials.get(): return
         config_file = utils.get_default_config_file('minervaboto', 'boto.conf')
         config = utils.read_config_file(config_file)
 
