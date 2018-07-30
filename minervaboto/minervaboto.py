@@ -174,7 +174,10 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F',
 
     # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
     soup, error = renew_all(soup, status_code)
-    if error: return error
+    if error:
+        if status_callback:
+            status_callback('Não renovado!')
+        return error
 
     # NOTE(ian): Parsing the information table in the results page.
     books = parse_table(soup, books)
