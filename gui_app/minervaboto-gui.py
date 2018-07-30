@@ -2,16 +2,17 @@
 
 from tkinter import *
 from tkinter import messagebox, ttk
+from ttkthemes import ThemedStyle
 from PIL import ImageTk, Image
 
 from queue import Queue
 from threading import Thread
 
+import minervaboto
 from minervaboto import utils
 
-import minervaboto
-
 import os
+import sys
 
 mb = messagebox
 
@@ -19,9 +20,8 @@ default_font = ('verdana', 11)
 default_pad = 5
 default_relief = FLAT
 
-
 class App:
-    def __init__(self):
+    def __init__(self, dark_theme=False):
         self.queue = Queue()
 
         self.root = Tk()
@@ -31,18 +31,25 @@ class App:
 
         self.var_save_credentials = IntVar()
 
-        ttk.Style().theme_use('clam')
-        ttk.Style().configure('TButton', font=default_font)
-        ttk.Style().configure('TLabel', font=default_font)
+        style = ThemedStyle(self.root)
+        if dark_theme:
+            # TODO(erick): This theme is somewhat beautiful, but its progressbar
+            # is ugly as hell.
+            style.theme_use('equilux')
+        else:
+            style.theme_use('arc')
 
-        main_frame = Frame(self.root)
+        style.configure('TButton', font=default_font)
+        style.configure('TLabel', font=default_font)
+
+        main_frame = ttk.Frame(self.root)
         main_frame.pack(expand=True, fill=BOTH)
 
         logo_img = ImageTk.PhotoImage(Image.open('logo.png'))
         logo = ttk.Label(main_frame, image=logo_img, padding=default_pad)
         logo.pack()
 
-        first_row = Frame(main_frame)
+        first_row = ttk.Frame(main_frame)
         first_row.pack(fill=X)
 
         id_label = ttk.Label(first_row, text='Id:', relief=default_relief)
@@ -55,7 +62,7 @@ class App:
         self.id_entry.pack(side=RIGHT, padx=default_pad)
 
 
-        second_row = Frame(main_frame)
+        second_row = ttk.Frame(main_frame)
         second_row.pack(fill=X)
 
         pass_label = ttk.Label(second_row, text='Senha:', relief=default_relief)
@@ -66,7 +73,7 @@ class App:
         self.pass_entry.pack(side=RIGHT, padx=default_pad)
         self.pass_entry.bind('<Return>', self.renew_callback)
 
-        third_row = Frame(main_frame)
+        third_row = ttk.Frame(main_frame)
         third_row.pack(fill=X)
 
         save_checkbox = ttk.Checkbutton(third_row, text='Salvar dados',
@@ -74,7 +81,7 @@ class App:
         save_checkbox.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
 
-        fourth_row = Frame(main_frame)
+        fourth_row = ttk.Frame(main_frame)
         fourth_row.pack(fill=X)
 
         self.renew_button = ttk.Button(fourth_row, text='Renovar',
@@ -82,12 +89,11 @@ class App:
         self.renew_button.pack(side=RIGHT, padx=default_pad, pady=default_pad)
         self.renew_button.bind('<Return>', self.renew_callback)
 
-        self.progress_row = Frame(main_frame)
+        self.progress_row = ttk.Frame(main_frame)
 
         self.progressbar = ttk.Progressbar(self.progress_row, orient='horizontal',
                                            mode='indeterminate')
         self.progressbar.pack(expand=True, fill=X)
-        self.progressbar.start(15)
 
         self.progress_status = ttk.Label(self.progress_row, relief=SUNKEN)
         self.progress_status.pack(expand=True, fill=X)
@@ -106,6 +112,7 @@ class App:
 
     def renew_callback(self, event=None):
         self.progress_row.pack(fill=X)
+        self.progressbar.start(15)
 
         RenewTask(self.queue, self.id_entry.get(), self.pass_entry.get()).start()
         self.root.after(15, self.wait_for_renewal)
@@ -185,4 +192,13 @@ class RenewTask(Thread):
 
     def new_satus(self, status):
         self.queue.put({'status': status})
-app = App()
+
+def main():
+    dark_theme = False
+    if len(sys.argv) == 2 and sys.argv[1] == '--dark-theme':
+        dark_theme = True
+
+    app = App(dark_theme)
+
+if __name__ == '__main__':
+    main()
