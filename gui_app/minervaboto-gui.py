@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 
 from tkinter import *
-from tkinter.messagebox import showinfo, showerror, showwarning
+from tkinter import messagebox, ttk
 from PIL import ImageTk, Image
+
+from queue import Queue
+from threading import Thread
 
 from minervaboto import utils
 
 import minervaboto
+
 import os
+
+mb = messagebox
 
 default_font = ('verdana', 14)
 default_pad = 5
@@ -16,6 +22,8 @@ default_relief = FLAT
 
 class App:
     def __init__(self):
+        self.queue = Queue()
+
         self.root = Tk()
         self.root.title('Renovação Minerva')
         self.root.resizable(False, False)
@@ -38,7 +46,8 @@ class App:
         id_label.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
         self.id_entry = Entry(first_row, validate='key')
-        self.id_entry['validatecommand'] = (self.id_entry.register(self.validate_id),'%P','%d')
+        self.id_entry['validatecommand'] = (self.id_entry.register(
+            self.validate_id),'%P','%d')
         self.id_entry.config(width=11, font=default_font)
         self.id_entry.pack(side=RIGHT, padx=default_pad)
 
@@ -73,6 +82,19 @@ class App:
         self.renew_button.pack(side=RIGHT, padx=default_pad, pady=default_pad)
         self.renew_button.bind('<Return>', self.renew_callback)
 
+        self.progress_row = Frame(main_frame)
+
+        progressbar = ttk.Progressbar(self.progress_row, orient='horizontal',
+                                      mode='indeterminate')
+        progressbar.pack(expand=True, fill=X)
+        progressbar.start(15)
+
+        self.progress_status = Label(self.progress_row, relief=SUNKEN)
+        self.progress_status.config(font=default_font)
+        self.progress_status.pack(expand=True, fill=X)
+        self.progress_status['text'] = ' '
+
+
         has_credentials = self.fill_credentials()
         self.var_save_credentials.set(has_credentials)
 
@@ -84,16 +106,31 @@ class App:
         self.root.mainloop()
 
     def renew_callback(self, event=None):
-        renewed = minervaboto.renew_books(self.id_entry.get(), self.pass_entry.get())
+        self.progress_row.pack(fill=X)
+
+        RenewTask(self.queue, self.id_entry.get(), self.pass_entry.get()).start()
+        self.root.after(15, self.wait_for_renewal)
+
+    def wait_for_renewal(self):
+        # NOTE(erick): Spin baby, spin!
+        if self.queue.empty():
+            self.root.after(15, self.wait_for_renewal)
+            return
+
+        self.renewal_done(self.queue.get(0))
+
+    def renewal_done(self, renewed):
+        self.progress_row.pack_forget()
+
         if renewed['result']:
-            showinfo('Renovação', minervaboto.renewed_to_string(renewed))
+            mb.showinfo('Renovação', minervaboto.renewed_to_string(renewed))
             self.save_credentials()
         else:
             if renewed['response']['code'] == 200:
-                showwarning('Renovação', minervaboto.renewed_to_string(renewed))
+                mb.showwarning('Renovação', minervaboto.renewed_to_string(renewed))
                 self.save_credentials()
             else:
-                showerror('Renovação', minervaboto.renewed_to_string(renewed))
+                mb.showerror('Renovação', minervaboto.renewed_to_string(renewed))
 
 
     def validate_id(self, input_str, action_type):
@@ -126,5 +163,16 @@ class App:
 
     def close(self, event=None):
         self.root.destroy()
+
+class RenewTask(Thread):
+    def __init__(self, queue, user_id, user_password):
+        Thread.__init__(self)
+
+        self.queue = queue
+        self.user_id = user_id
+        self.user_password = user_password
+    def run(self):
+        renewed = minervaboto.renew_books(self.user_id, self.user_password)
+        self.queue.put(renewed)
 
 app = App()
