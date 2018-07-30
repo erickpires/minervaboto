@@ -84,10 +84,10 @@ class App:
 
         self.progress_row = Frame(main_frame)
 
-        progressbar = ttk.Progressbar(self.progress_row, orient='horizontal',
-                                      mode='indeterminate')
-        progressbar.pack(expand=True, fill=X)
-        progressbar.start(15)
+        self.progressbar = ttk.Progressbar(self.progress_row, orient='horizontal',
+                                           mode='indeterminate')
+        self.progressbar.pack(expand=True, fill=X)
+        self.progressbar.start(15)
 
         self.progress_status = Label(self.progress_row, relief=SUNKEN)
         self.progress_status.config(font=default_font)
@@ -117,11 +117,17 @@ class App:
             self.root.after(15, self.wait_for_renewal)
             return
 
-        self.renewal_done(self.queue.get(0))
+        result = self.queue.get(0)
+        if 'status' in result:
+            self.progress_status['text'] = result['status']
+            self.root.after(15, self.wait_for_renewal)
+            return
+
+
+        self.renewal_done(result)
 
     def renewal_done(self, renewed):
-        self.progress_row.pack_forget()
-
+        self.progressbar.stop()
         if renewed['result']:
             mb.showinfo('Renovação', minervaboto.renewed_to_string(renewed))
             self.save_credentials()
@@ -131,6 +137,8 @@ class App:
                 self.save_credentials()
             else:
                 mb.showerror('Renovação', minervaboto.renewed_to_string(renewed))
+
+        self.progress_row.pack_forget()
 
 
     def validate_id(self, input_str, action_type):
@@ -172,7 +180,10 @@ class RenewTask(Thread):
         self.user_id = user_id
         self.user_password = user_password
     def run(self):
-        renewed = minervaboto.renew_books(self.user_id, self.user_password)
+        renewed = minervaboto.renew_books(self.user_id, self.user_password,
+                                          status_callback=self.new_satus)
         self.queue.put(renewed)
 
+    def new_satus(self, status):
+        self.queue.put({'status': status})
 app = App()
