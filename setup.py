@@ -3,7 +3,7 @@ from setuptools import setup
 setup(name='minervaboto',
       description='A renewal tool for Acervo Minerva',
       # long_description=long_description,
-      version='1.0.7',
+      version='1.1.0',
       url='https://github.com/erickpires/minervaboto',
       author='Erick Pires',
       author_email='rckkas@gmail.com',

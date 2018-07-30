@@ -75,25 +75,25 @@ def parse_table(soup, books=[]):
         pos += 1
     return books
 
-def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
-    # NOTE(erick): Loading the front-page and looking for the login link
+def get_login_link(url):
     response = requests.get(url)
     if response.status_code != 200: return get_return_dict(response.status_code)
 
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     login_link = find_tag_containing_text(soup, 'a', 'Login')
+    return login_link
 
-    if not login_link: return get_return_dict(422, 'Unable to find login link')
-
-    # NOTE(erick): Searching for the login form.
+def get_login_form(login_link):
     response = requests.get(login_link.get('href'))
     if response.status_code != 200: return get_return_dict(response.status_code)
 
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     form = soup.find('form')
     if not form.get('name') == 'form1':
-        return get_return_dict(422, 'Unable to find form')
+        return (None, get_return_dict(422, 'Unable to find form'))
+    return (form, None)
 
+def log_in(form, user_id, user_password):
     action = form.get('action')
     func = get_input_named(form, 'func')
     bor_library = get_input_named(form, 'bor_library')
@@ -110,26 +110,29 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
     }
 
     response = requests.post(action, data=payload)
-    if response.status_code != 200: return get_return_dict(response.status_code)
+    if response.status_code != 200: return (None, get_return_dict(response.status_code))
 
     # NOTE(ian): Checking if the login was successful.
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     if find_tag_containing_text(soup, 'a', 'Login'):
         message = soup.find_all('td', class_='feedbackbar')[0]
-        return get_return_dict(401, message.getText().strip())
+        return (None, get_return_dict(401, message.getText().strip()))
 
-    # NOTE(erick): Going to the borrowed books page.
+    return ((action, bor_library), None)
+
+def borrowed_books(base_url, bor_library):
     params = urlencode({'func': 'bor-loan', 'adm_library' : bor_library})
-    url = action + "?" + params
+    url = base_url + "?" + params
 
     response = requests.get(url)
-    if response.status_code != 200: return get_return_dict(response.status_code)
+    if response.status_code != 200: return (None, get_return_dict(response.status_code))
 
     # NOTE(ian): Parsing the information table in the borrowed books page.
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     books = parse_table(soup)
+    return ((soup, books, response.status_code), None)
 
-    # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
+def renew_all(soup, status_code):
     renew_link = None
     for link in soup.find_all('a'):
         link_text = link.getText().strip()
@@ -139,16 +142,34 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
             break
 
     if not renew_link:
-        return get_return_dict(response.status_code,
-            'Você não tem livros para renovar', None)
+        return (None, get_return_dict(status_code, 'Você não tem livros para renovar', None))
 
     url = get_link_from_js_replace_page(renew_link.get('href'))
-    if not url: return get_return_dict(422, 'No JS replacePage')
+    if not url: return (None, get_return_dict(422, 'No JS replacePage'))
     response = requests.get(url)
-    if response.status_code != 200: return get_return_dict(response.status_code)
+    if response.status_code != 200: return (None, get_return_dict(response.status_code))
+
+    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
+    return (soup, None)
+
+def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
+    login_link = get_login_link(url)
+    if not login_link: return get_return_dict(422, 'Unable to find login link')
+
+    form, error = get_login_form(login_link)
+    if error: return error
+
+    (base_url, library), error = log_in(form, user_id, user_password)
+    if error: return error
+
+    (soup, books, status_code), error = borrowed_books(base_url, library)
+    if error: return error
+
+    # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
+    soup, error = renew_all(soup, status_code)
+    if error: return error
 
     # NOTE(ian): Parsing the information table in the results page.
-    soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     books = parse_table(soup, books)
 
     return get_return_dict(200, None, books)
