@@ -132,7 +132,7 @@ def borrowed_books(base_url, bor_library):
     books = parse_table(soup)
     return ((soup, books, response.status_code), None)
 
-def renew_all(soup, status_code):
+def renew_all(soup, books, status_code):
     renew_link = None
     for link in soup.find_all('a'):
         link_text = link.getText().strip()
@@ -142,15 +142,19 @@ def renew_all(soup, status_code):
             break
 
     if not renew_link:
-        return (None, get_return_dict(status_code, 'Você não tem livros para renovar', None))
+        return get_return_dict(status_code, 'Você não tem livros para renovar', None)
 
     url = get_link_from_js_replace_page(renew_link.get('href'))
-    if not url: return (None, get_return_dict(422, 'No JS replacePage'))
+    if not url: return get_return_dict(422, 'No JS replacePage')
     response = requests.get(url)
-    if response.status_code != 200: return (None, get_return_dict(response.status_code))
+    if response.status_code != 200: return get_return_dict(response.status_code)
 
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
-    return (soup, None)
+
+    # NOTE(ian): Parsing the information table in the results page.
+    books = parse_table(soup, books)
+
+    return get_return_dict(200, None, books)
 
 def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F',
                 status_callback=None):
@@ -160,32 +164,27 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F',
     login_link = get_login_link(url)
     if not login_link: return get_return_dict(422, 'Unable to find login link')
 
-    form, error = get_login_form(login_link)
-    if error: return error
+    form, return_dict = get_login_form(login_link)
+    if return_dict: return return_dict
 
-    (base_url, library), error = log_in(form, user_id, user_password)
-    if error: return error
+    (base_url, library), return_dict = log_in(form, user_id, user_password)
+    if return_dict: return return_dict
 
     if status_callback:
         status_callback('Renovando...')
 
-    (soup, books, status_code), error = borrowed_books(base_url, library)
-    if error: return error
+    (soup, books, status_code), return_dict = borrowed_books(base_url, library)
+    if return_dict: return return_dict
 
     # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
-    soup, error = renew_all(soup, status_code)
-    if error:
-        if status_callback:
-            status_callback('Não renovado!')
-        return error
-
-    # NOTE(ian): Parsing the information table in the results page.
-    books = parse_table(soup, books)
-
+    return_dict = renew_all(soup, books, status_code)
     if status_callback:
-        status_callback('Renovado!')
+        if return_dict['response']['code'] == 200:
+            status_callback('Renovado!')
+        else:
+            status_callback('Não renovado!')
 
-    return get_return_dict(200, None, books)
+    return return_dict
 
 def books_to_string(books):
     total_renewed = 0
