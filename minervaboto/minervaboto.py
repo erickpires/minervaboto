@@ -152,7 +152,11 @@ def renew_all(soup, status_code):
     soup = BeautifulSoup(response.content.decode('utf-8', 'ignore'), default_parser)
     return (soup, None)
 
-def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
+def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F',
+                status_callback=None):
+    if status_callback:
+        status_callback('Logando...')
+
     login_link = get_login_link(url)
     if not login_link: return get_return_dict(422, 'Unable to find login link')
 
@@ -161,6 +165,9 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
 
     (base_url, library), error = log_in(form, user_id, user_password)
     if error: return error
+
+    if status_callback:
+        status_callback('Renovando...')
 
     (soup, books, status_code), error = borrowed_books(base_url, library)
     if error: return error
@@ -171,6 +178,9 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F'):
 
     # NOTE(ian): Parsing the information table in the results page.
     books = parse_table(soup, books)
+
+    if status_callback:
+        status_callback('Renovado!')
 
     return get_return_dict(200, None, books)
 
