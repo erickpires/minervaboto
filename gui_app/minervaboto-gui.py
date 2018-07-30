@@ -15,7 +15,7 @@ import os
 
 mb = messagebox
 
-default_font = ('verdana', 14)
+default_font = ('verdana', 11)
 default_pad = 5
 default_relief = FLAT
 
@@ -31,54 +31,54 @@ class App:
 
         self.var_save_credentials = IntVar()
 
+        ttk.Style().theme_use('clam')
+        ttk.Style().configure('TButton', font=default_font)
+        ttk.Style().configure('TLabel', font=default_font)
+
         main_frame = Frame(self.root)
         main_frame.pack(expand=True, fill=BOTH)
 
         logo_img = ImageTk.PhotoImage(Image.open('logo.png'))
-        logo = Label(main_frame, image=logo_img, pady=default_pad)
+        logo = ttk.Label(main_frame, image=logo_img, padding=default_pad)
         logo.pack()
 
         first_row = Frame(main_frame)
         first_row.pack(fill=X)
 
-        id_label = Label(first_row, text='Id:', relief=default_relief)
-        id_label.config(font=default_font)
+        id_label = ttk.Label(first_row, text='Id:', relief=default_relief)
         id_label.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
-        self.id_entry = Entry(first_row, validate='key')
+        self.id_entry = ttk.Entry(first_row, validate='key', font=default_font)
         self.id_entry['validatecommand'] = (self.id_entry.register(
             self.validate_id),'%P','%d')
-        self.id_entry.config(width=11, font=default_font)
+        self.id_entry.config(width=11)
         self.id_entry.pack(side=RIGHT, padx=default_pad)
 
 
         second_row = Frame(main_frame)
         second_row.pack(fill=X)
 
-        pass_label = Label(second_row, text='Senha:', relief=default_relief)
-        pass_label.config(font=default_font)
+        pass_label = ttk.Label(second_row, text='Senha:', relief=default_relief)
         pass_label.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
-        self.pass_entry = Entry(second_row)
-        self.pass_entry.config(width=11, font=default_font, show="*")
+        self.pass_entry = ttk.Entry(second_row, font=default_font)
+        self.pass_entry.config(width=11, show="*")
         self.pass_entry.pack(side=RIGHT, padx=default_pad)
         self.pass_entry.bind('<Return>', self.renew_callback)
 
         third_row = Frame(main_frame)
         third_row.pack(fill=X)
 
-        save_checkbox = Checkbutton(third_row, text='Salvar dados',
-                                    variable=self.var_save_credentials)
-        save_checkbox.config(font=default_font)
+        save_checkbox = ttk.Checkbutton(third_row, text='Salvar dados',
+                                        variable=self.var_save_credentials)
         save_checkbox.pack(side=LEFT, padx=default_pad, pady=default_pad)
 
 
         fourth_row = Frame(main_frame)
         fourth_row.pack(fill=X)
 
-        self.renew_button = Button(fourth_row, text='Renovar',
-                                   command=self.renew_callback)
-        self.renew_button.config(font=default_font)
+        self.renew_button = ttk.Button(fourth_row, text='Renovar',
+                                       command=self.renew_callback)
         self.renew_button.pack(side=RIGHT, padx=default_pad, pady=default_pad)
         self.renew_button.bind('<Return>', self.renew_callback)
 
@@ -89,8 +89,7 @@ class App:
         self.progressbar.pack(expand=True, fill=X)
         self.progressbar.start(15)
 
-        self.progress_status = Label(self.progress_row, relief=SUNKEN)
-        self.progress_status.config(font=default_font)
+        self.progress_status = ttk.Label(self.progress_row, relief=SUNKEN)
         self.progress_status.pack(expand=True, fill=X)
         self.progress_status['text'] = ' '
 
