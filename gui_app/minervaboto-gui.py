@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
 from minervaboto import renew_books, renewed_to_string, utils
-from queue import Queue
-from threading import Thread
+from multiprocessing import Process, Queue
 
 import os
 import wx
 
-class RenewTask(Thread):
+class RenewTask(Process):
     def __init__(self, queue, user_id, user_password):
-        Thread.__init__(self)
+        Process.__init__(self)
 
         self.queue = queue
         self.user_id = user_id
@@ -61,7 +60,7 @@ class LoginWindow(wx.Frame):
         self.config = config
         self.config_file = config_file
         self.has_config = has_config
-
+        self.process = None
         self.queue = Queue()
 
         self.panel = wx.Panel(self)
@@ -117,6 +116,7 @@ class LoginWindow(wx.Frame):
         self.SetStatusBar(self.status)
 
         self.Show(True)
+        self.Bind(wx.EVT_CLOSE, self.OnWindowClose)
 
     def OnInputChange(self, event):
         if (self.input_id.GetValue().isdigit() and
@@ -131,9 +131,9 @@ class LoginWindow(wx.Frame):
                 child.Disable()
         self.status.gauge.Show(True)
 
-        RenewTask(self.queue,
-                  self.input_id.GetValue(), self.input_pass.GetValue()
-        ).start()
+        self.process = RenewTask(self.queue, self.input_id.GetValue(),
+                                 self.input_pass.GetValue())
+        self.process.start()
         self.OnTimer()
 
     def OnTimer(self):
@@ -149,6 +149,10 @@ class LoginWindow(wx.Frame):
             return
 
         self.FinishedRenewal(result)
+
+    def OnWindowClose(self, event):
+        if self.process: self.process.terminate()
+        event.Skip()
 
     def FinishedRenewal(self, renewed):
         for child in self.panel.GetChildren():
