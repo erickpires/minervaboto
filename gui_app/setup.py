@@ -6,7 +6,7 @@ __version__ = '1.0.0'
 
 include_files = ['logo.png']
 excludes = []
-packages = ['wxPython', 'queue', 'threading', 'minervaboto', 'os', 'sys']
+packages = ['queue', 'multiprocessing', 'minervaboto', 'os', 'sys', 'wxPython']
 
 setup(
     name = 'Renovação Minerva',
@@ -18,5 +18,5 @@ setup(
     'excludes': excludes,
     'include_msvcr': True,
 }},
-executables = [Executable('minervaboto-gui.py')]
+executables = [Executable('minervaboto-gui.pyw')]
 )
