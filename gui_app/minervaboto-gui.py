@@ -29,7 +29,7 @@ class StatusBar(wx.StatusBar):
         self.SetFieldsCount(2)
         self.SetStatusWidths([-1, -1])
 
-        self.SetStatusText('Pronto', 0)
+        self.SetStatusText(utils.get_module_version('minervaboto'), 0)
 
         self.gauge = wx.Gauge(self, -1, 100, size=(158, -1))
         self.OnResize(None)
@@ -161,7 +161,7 @@ class LoginWindow(wx.Frame):
                 child.Enable()
         self.status.gauge.Show(False)
         self.status.gauge.SetValue(0)
-        self.SetStatusText('Pronto', 0)
+        self.SetStatusText(utils.get_module_version('minervaboto'), 0)
 
         if renewed['result']:
             result_list = renewed_to_string(renewed, True)

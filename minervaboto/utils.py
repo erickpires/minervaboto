@@ -1,7 +1,11 @@
 from appdirs import user_config_dir
 from configparser import ConfigParser
 from getpass import getpass
+from pkg_resources import get_distribution
 import os
+
+def get_module_version(module):
+    return module + ' ' + get_distribution(module).version
 
 def get_env_vars(env_vars):
     values = []
