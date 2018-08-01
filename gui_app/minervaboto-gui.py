@@ -5,6 +5,7 @@ from multiprocessing import Process, Queue
 
 import os
 import wx
+import wx.lib.dialogs
 
 class RenewTask(Process):
     def __init__(self, queue, user_id, user_password):
@@ -160,31 +161,29 @@ class LoginWindow(wx.Frame):
                 child.Enable()
         self.status.gauge.Show(False)
         self.status.gauge.SetValue(0)
+        self.SetStatusText('Pronto', 0)
 
         if renewed['result']:
-            message = '\n'.join(renewed_to_string(renewed, True)[1:])
-            style = wx.NO_DEFAULT | wx.YES_NO | wx.ICON_NONE
+            result_list = renewed_to_string(renewed, True)
+            dialog = wx.lib.dialogs.ScrolledMessageDialog(
+                self, result_list[0], result_list[1], size=(480, 300)
+            )
         else:
-            message = renewed['response']['message']
             if renewed['response']['code'] == 200:
-                style = wx.OK | wx.ICON_INFORMATION
+                icon = wx.ICON_INFORMATION
             else:
-                style = wx.OK | wx.ICON_ERROR
+                icon = wx.ICON_ERROR
+            dialog = wx.MessageDialog(self, renewed['response']['message'],
+                                      'Renovação', wx.OK | wx.CENTRE | icon)
 
-        dialog = wx.MessageDialog(self, message, 'Renovação', style | wx.CENTRE)
-        dialog.SetYesNoLabels('&Detalhes', '&OK')
-        action = dialog.ShowModal()
+        dialog.CenterOnParent(wx.BOTH)
+        dialog.ShowModal()
         dialog.Destroy()
 
         if renewed['response']['code'] != 401:
             self.SaveCredentials()
 
         self.input_id.SetFocus()
-        self.SetStatusText('Pronto', 0)
-
-        if action == wx.ID_YES:
-            # TODO(ian): Open window with renewal table
-            print(renewed_to_string(renewed, True)[0])
 
     def SaveCredentials(self):
         if self.check_save.GetValue():
