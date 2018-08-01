@@ -1,182 +1,11 @@
 #!/usr/bin/env python3
 
-from tkinter import *
-from tkinter import messagebox, ttk
-from ttkthemes import ThemedStyle
-from PIL import ImageTk, Image
-
+from minervaboto import renew_books, renewed_to_string, utils
 from queue import Queue
 from threading import Thread
 
-import minervaboto
-from minervaboto import utils
-
 import os
-import sys
-
-mb = messagebox
-
-default_font = ('verdana', 11)
-default_pad = 5
-default_relief = FLAT
-
-class App:
-    def __init__(self, dark_theme=False):
-        self.queue = Queue()
-
-        self.root = Tk()
-        self.root.title('Renovação Minerva')
-        self.root.resizable(False, False)
-        self.root.bind('<Escape>', self.close)
-
-        self.var_save_credentials = IntVar()
-
-        style = ThemedStyle(self.root)
-        if dark_theme:
-            # TODO(erick): This theme is somewhat beautiful, but its progressbar
-            # is ugly as hell.
-            style.theme_use('equilux')
-        else:
-            style.theme_use('arc')
-
-        style.configure('TButton', font=default_font)
-        style.configure('TLabel', font=default_font)
-
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(expand=True, fill=BOTH)
-
-        logo_img = ImageTk.PhotoImage(Image.open('logo.png'))
-        logo = ttk.Label(main_frame, image=logo_img, padding=default_pad)
-        logo.pack()
-
-        first_row = ttk.Frame(main_frame)
-        first_row.pack(fill=X)
-
-        id_label = ttk.Label(first_row, text='Id:', relief=default_relief)
-        id_label.pack(side=LEFT, padx=default_pad, pady=default_pad)
-
-        self.id_entry = ttk.Entry(first_row, validate='key', font=default_font)
-        self.id_entry['validatecommand'] = (self.id_entry.register(
-            self.validate_id),'%P','%d')
-        self.id_entry.config(width=11)
-        self.id_entry.pack(side=RIGHT, padx=default_pad)
-
-
-        second_row = ttk.Frame(main_frame)
-        second_row.pack(fill=X)
-
-        pass_label = ttk.Label(second_row, text='Senha:', relief=default_relief)
-        pass_label.pack(side=LEFT, padx=default_pad, pady=default_pad)
-
-        self.pass_entry = ttk.Entry(second_row, font=default_font)
-        self.pass_entry.config(width=11, show="*")
-        self.pass_entry.pack(side=RIGHT, padx=default_pad)
-        self.pass_entry.bind('<Return>', self.renew_callback)
-
-        third_row = ttk.Frame(main_frame)
-        third_row.pack(fill=X)
-
-        save_checkbox = ttk.Checkbutton(third_row, text='Salvar dados',
-                                        variable=self.var_save_credentials)
-        save_checkbox.pack(side=LEFT, padx=default_pad, pady=default_pad)
-
-
-        fourth_row = ttk.Frame(main_frame)
-        fourth_row.pack(fill=X)
-
-        self.renew_button = ttk.Button(fourth_row, text='Renovar',
-                                       command=self.renew_callback)
-        self.renew_button.pack(side=RIGHT, padx=default_pad, pady=default_pad)
-        self.renew_button.bind('<Return>', self.renew_callback)
-
-        self.progress_row = ttk.Frame(main_frame)
-
-        self.progressbar = ttk.Progressbar(self.progress_row, orient='horizontal',
-                                           mode='indeterminate')
-        self.progressbar.pack(expand=True, fill=X)
-
-        self.progress_status = ttk.Label(self.progress_row, relief=SUNKEN)
-        self.progress_status.pack(expand=True, fill=X)
-        self.progress_status['text'] = ' '
-
-
-        has_credentials = self.fill_credentials()
-        self.var_save_credentials.set(has_credentials)
-
-        if has_credentials:
-            self.renew_button.focus_set()
-        else:
-            self.id_entry.focus_set()
-
-        self.root.mainloop()
-
-    def renew_callback(self, event=None):
-        self.progress_row.pack(fill=X)
-        self.progressbar.start(15)
-
-        RenewTask(self.queue, self.id_entry.get(), self.pass_entry.get()).start()
-        self.root.after(15, self.wait_for_renewal)
-
-    def wait_for_renewal(self):
-        # NOTE(erick): Spin baby, spin!
-        if self.queue.empty():
-            self.root.after(15, self.wait_for_renewal)
-            return
-
-        result = self.queue.get(0)
-        if 'status' in result:
-            self.progress_status['text'] = result['status']
-            self.root.after(15, self.wait_for_renewal)
-            return
-
-
-        self.renewal_done(result)
-
-    def renewal_done(self, renewed):
-        self.progressbar.stop()
-        if renewed['result']:
-            mb.showinfo('Renovação', minervaboto.renewed_to_string(renewed))
-            self.save_credentials()
-        else:
-            if renewed['response']['code'] == 200:
-                mb.showwarning('Renovação', minervaboto.renewed_to_string(renewed))
-                self.save_credentials()
-            else:
-                mb.showerror('Renovação', minervaboto.renewed_to_string(renewed))
-
-        self.progress_row.pack_forget()
-
-
-    def validate_id(self, input_str, action_type):
-        if action_type == '1': #insert
-            return input_str.isdigit()
-
-        return True
-
-    def fill_credentials(self):
-        config_file = utils.get_default_config_file('minervaboto', 'boto.conf')
-        if not os.path.exists(config_file): return False
-
-        config = utils.read_config_file(config_file)
-        user_id, user_pass = utils.get_info_from_config(config)
-
-        if not (user_id and user_pass): return False
-
-        self.id_entry.insert(0, user_id)
-        self.pass_entry.insert(0, user_pass)
-
-        return True
-    def save_credentials(self):
-        if not self.var_save_credentials.get(): return
-        config_file = utils.get_default_config_file('minervaboto', 'boto.conf')
-        config = utils.read_config_file(config_file)
-
-        config['LOGIN']['MINERVA_ID'] = self.id_entry.get()
-        config['LOGIN']['MINERVA_PASS'] = self.pass_entry.get()
-        utils.write_config_file(config, config_file)
-
-    def close(self, event=None):
-        self.root.destroy()
+import wx
 
 class RenewTask(Thread):
     def __init__(self, queue, user_id, user_password):
@@ -185,20 +14,192 @@ class RenewTask(Thread):
         self.queue = queue
         self.user_id = user_id
         self.user_password = user_password
+
     def run(self):
-        renewed = minervaboto.renew_books(self.user_id, self.user_password,
-                                          status_callback=self.new_satus)
+        renewed = renew_books(self.user_id, self.user_password,
+                              status_callback=self.OnNewStatus)
         self.queue.put(renewed)
 
-    def new_satus(self, status):
-        self.queue.put({'status': status})
+    def OnNewStatus(self, status, progress):
+        self.queue.put({'status': status, 'progress': progress})
 
-def main():
-    dark_theme = False
-    if len(sys.argv) == 2 and sys.argv[1] == '--dark-theme':
-        dark_theme = True
+class StatusBar(wx.StatusBar):
+    def __init__(self, parent):
+        wx.StatusBar.__init__(self, parent, -1)
+        self.SetFieldsCount(2)
+        self.SetStatusWidths([-1, -1])
 
-    app = App(dark_theme)
+        self.SetStatusText('Pronto', 0)
+
+        self.gauge = wx.Gauge(self, -1, 100, size=(160, -1))
+        self.OnResize(None)
+        self.gauge.Show(False)
+
+        self.Bind(wx.EVT_SIZE, self.OnResize)
+
+    def OnResize(self, event):
+        field_rect = self.GetFieldRect(1)
+        gauge_rect = self.gauge.GetRect()
+
+        width_diff = field_rect.width - gauge_rect.width
+        field_rect.width = gauge_rect.width
+        field_rect.x += width_diff - 3
+
+        field_rect.height = 14
+        field_rect.y = 5
+
+        self.gauge.SetRect(field_rect)
+
+class LoginWindow(wx.Frame):
+    def __init__(self, title, user_id='', user_pass='',
+                 config=None, config_file=None, has_config=False):
+        wx.Frame.__init__(
+            self, None, -1, title,
+            style=wx.DEFAULT_FRAME_STYLE ^ wx.RESIZE_BORDER ^ wx.MAXIMIZE_BOX
+        )
+
+        self.config = config
+        self.config_file = config_file
+        self.has_config = has_config
+
+        self.queue = Queue()
+
+        self.panel = wx.Panel(self)
+
+        sizer = wx.GridBagSizer(5, 5)
+
+        logo = wx.StaticBitmap(self.panel, -1,
+                               wx.Bitmap('logo.png', wx.BITMAP_TYPE_ANY))
+        sizer.Add(logo, pos=(0, 0), span=(1, 5), border=20,
+                  flag=wx.ALIGN_CENTER_HORIZONTAL | wx.ALL)
+
+        label_id = wx.StaticText(self.panel, label='ID/CPF')
+        sizer.Add(label_id, pos=(1, 0),
+                  flag=wx.LEFT | wx.ALIGN_CENTER_VERTICAL, border=10)
+
+        self.input_id = wx.TextCtrl(self.panel, value=user_id)
+        self.Bind(wx.EVT_TEXT, self.OnInputChange, self.input_id)
+        sizer.Add(self.input_id, pos=(1, 1), span=(1, 4),
+                  flag=wx.RIGHT | wx.EXPAND, border=10)
+
+        label_pass = wx.StaticText(self.panel, label='Senha')
+        sizer.Add(label_pass, pos=(2, 0),
+                  flag=wx.LEFT | wx.ALIGN_CENTER_VERTICAL, border=10)
+
+        self.input_pass = wx.TextCtrl(self.panel, value=user_pass,
+                                      style=wx.TE_PASSWORD)
+        self.Bind(wx.EVT_TEXT, self.OnInputChange, self.input_pass)
+        sizer.Add(self.input_pass, pos=(2, 1), span=(1, 4),
+                  flag=wx.RIGHT | wx.EXPAND, border=10)
+
+        self.check_save = wx.CheckBox(self.panel, label='Salvar dados')
+        self.check_save.SetValue(has_config)
+        sizer.Add(self.check_save, pos=(3, 1), span=(1,1))
+
+        self.button_renew = wx.Button(self.panel, label='Renovar')
+        self.Bind(wx.EVT_BUTTON, self.OnRenewClick, self.button_renew)
+        self.button_renew.SetDefault()
+        sizer.Add(self.button_renew, pos=(4, 4), span=(1, 1),
+                  flag=wx.BOTTOM | wx.RIGHT | wx.ALIGN_RIGHT, border=10)
+        self.OnInputChange(None)
+
+        sizer.AddGrowableCol(2)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        self.panel.Sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.panel.Sizer.Add(sizer, flag=wx.CENTER | wx.BOTTOM | wx.EXPAND,
+                             border=30 if wx.Platform == '__WXMSW__' else 0)
+        vbox.Add(self.panel, flag=wx.CENTER)
+        self.SetSizer(vbox)
+        self.panel.Sizer.Fit(self)
+
+        self.status = StatusBar(self)
+        self.SetStatusBar(self.status)
+
+        self.Show(True)
+
+    def OnInputChange(self, event):
+        if (self.input_id.GetValue().isdigit() and
+            len(self.input_pass.GetValue()) > 0):
+            self.button_renew.Enable()
+        else:
+            self.button_renew.Disable()
+
+    def OnRenewClick(self, event):
+        for child in self.panel.GetChildren():
+            if not isinstance(child, wx.StaticBitmap):
+                child.Disable()
+        self.status.gauge.Show(True)
+
+        RenewTask(self.queue,
+                  self.input_id.GetValue(), self.input_pass.GetValue()
+        ).start()
+        self.OnTimer()
+
+    def OnTimer(self):
+        if self.queue.empty():
+            wx.CallLater(15, self.OnTimer)
+            return
+
+        result = self.queue.get(0)
+        if 'status' in result:
+            self.SetStatusText(result['status'], 0)
+            self.status.gauge.SetValue(result['progress'])
+            wx.CallLater(15, self.OnTimer)
+            return
+
+        self.FinishedRenewal(result)
+
+    def FinishedRenewal(self, renewed):
+        for child in self.panel.GetChildren():
+            if not isinstance(child, wx.StaticBitmap):
+                child.Enable()
+        self.status.gauge.Show(False)
+        self.status.gauge.SetValue(0)
+
+        if renewed['result']:
+            # TODO(ian): Add an option to show details
+            icon = wx.ICON_NONE
+            message = renewed_to_string(renewed).split('\n')[-1]
+        else:
+            message = renewed_to_string(renewed)
+            if renewed['response']['code'] == 200:
+                icon = wx.ICON_INFORMATION
+            else:
+                icon = wx.ICON_ERROR
+
+        dialog = wx.MessageDialog(self, message, 'Renovação', wx.OK | icon)
+        dialog.ShowModal()
+        dialog.Destroy()
+
+        if renewed['response']['code'] != 401:
+            self.SaveCredentials()
+
+        self.input_id.SetFocus()
+        self.SetStatusText('Pronto', 0)
+
+    def SaveCredentials(self):
+        if self.check_save.GetValue():
+            self.config['LOGIN']['MINERVA_ID'] = self.input_id.GetValue()
+            self.config['LOGIN']['MINERVA_PASS'] = self.input_pass.GetValue()
+        else:
+            self.config['LOGIN']['MINERVA_ID'] = ''
+            self.config['LOGIN']['MINERVA_PASS'] = ''
+
+        if self.has_config or self.check_save.GetValue():
+            utils.write_config_file(self.config, self.config_file)
 
 if __name__ == '__main__':
-    main()
+    title = 'Renovação Minerva'
+
+    config_file = utils.get_default_config_file('minervaboto', 'boto.conf')
+    config = utils.read_config_file(config_file)
+    user_id, user_pass = utils.get_info_from_config(config)
+    if (os.path.exists(config_file) and user_id and user_pass):
+        has_config = True
+    else:
+        has_config = False
+
+    app = wx.App(False)
+    LoginWindow(title, user_id, user_pass, config, config_file, has_config)
+    app.MainLoop()

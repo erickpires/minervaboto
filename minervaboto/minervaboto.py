@@ -159,34 +159,40 @@ def renew_all(soup, books, status_code):
 def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F',
                 status_callback=None):
     if status_callback:
-        status_callback('Logando...')
+        status_callback('Carregando...', 0)
 
     login_link = get_login_link(url)
     if not login_link: return get_return_dict(422, 'Unable to find login link')
 
+    if status_callback:
+        status_callback('Preparando login...', 20)
     form, return_dict = get_login_form(login_link)
     if return_dict: return return_dict
 
+    if status_callback:
+        status_callback('Logando...', 40)
     result, return_dict = log_in(form, user_id, user_password)
     if return_dict: return return_dict
 
     base_url, library = result
 
     if status_callback:
-        status_callback('Renovando...')
+        status_callback('Abrindo empréstimos...', 60)
 
     result, return_dict = borrowed_books(base_url, library)
     if return_dict: return return_dict
 
     soup, books, status_code = result
 
+    if status_callback:
+        status_callback('Renovando...', 80)
     # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
     return_dict = renew_all(soup, books, status_code)
     if status_callback:
-        if return_dict['response']['code'] == 200:
-            status_callback('Renovado!')
+        if return_dict['response']['code'] == 200 and return_dict['result']:
+            status_callback('Renovado!', 100)
         else:
-            status_callback('Não renovado!')
+            status_callback('Não renovado!', 0)
 
     return return_dict
 
