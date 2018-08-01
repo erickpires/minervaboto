@@ -30,7 +30,7 @@ class StatusBar(wx.StatusBar):
 
         self.SetStatusText('Pronto', 0)
 
-        self.gauge = wx.Gauge(self, -1, 100, size=(160, -1))
+        self.gauge = wx.Gauge(self, -1, 100, size=(158, -1))
         self.OnResize(None)
         self.gauge.Show(False)
 
@@ -162,18 +162,18 @@ class LoginWindow(wx.Frame):
         self.status.gauge.SetValue(0)
 
         if renewed['result']:
-            # TODO(ian): Add an option to show details
-            icon = wx.ICON_NONE
-            message = renewed_to_string(renewed).split('\n')[-1]
+            message = '\n'.join(renewed_to_string(renewed, True)[1:])
+            style = wx.NO_DEFAULT | wx.YES_NO | wx.ICON_NONE
         else:
-            message = renewed_to_string(renewed)
+            message = renewed['response']['message']
             if renewed['response']['code'] == 200:
-                icon = wx.ICON_INFORMATION
+                style = wx.OK | wx.ICON_INFORMATION
             else:
-                icon = wx.ICON_ERROR
+                style = wx.OK | wx.ICON_ERROR
 
-        dialog = wx.MessageDialog(self, message, 'Renovação', wx.OK | icon)
-        dialog.ShowModal()
+        dialog = wx.MessageDialog(self, message, 'Renovação', style | wx.CENTRE)
+        dialog.SetYesNoLabels('&Detalhes', '&OK')
+        action = dialog.ShowModal()
         dialog.Destroy()
 
         if renewed['response']['code'] != 401:
@@ -181,6 +181,10 @@ class LoginWindow(wx.Frame):
 
         self.input_id.SetFocus()
         self.SetStatusText('Pronto', 0)
+
+        if action == wx.ID_YES:
+            # TODO(ian): Open window with renewal table
+            print(renewed_to_string(renewed, True)[0])
 
     def SaveCredentials(self):
         if self.check_save.GetValue():

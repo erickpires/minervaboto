@@ -189,16 +189,17 @@ def renew_books(user_id, user_password, url='https://minerva.ufrj.br/F',
     # NOTE(erick): Searching for the 'Renovar Todos' link and renewing.
     return_dict = renew_all(soup, books, status_code)
     if status_callback:
-        if return_dict['response']['code'] == 200 and return_dict['result']:
-            status_callback('Renovado!', 100)
+        if return_dict['response']['code'] == 200:
+            status_callback('Concluído', 100)
         else:
-            status_callback('Não renovado!', 0)
+            status_callback('Erro', 0)
 
     return return_dict
 
-def books_to_string(books):
+def books_to_string(books, split_result):
     total_renewed = 0
     next_renewal = None
+    return_list = []
 
     result = ''
     for idx, book in enumerate(books):
@@ -218,16 +219,21 @@ def books_to_string(books):
             result += '\tObservações: ' + book['issues'] + '\n'
         result += '\n'
 
-    result += ('%s livro%s renovado%s. Data mais próxima para devolução: %s.' %
-        (str(total_renewed) if total_renewed > 0 else 'Nenhum',
-         's' if total_renewed > 1 else '', 's' if total_renewed > 1 else '',
-         datetime.strftime(book['return_until'], '%d/%m/%Y'))
-    )
+    if split_result: return_list.append(result[:-2])
 
-    return result
+    total = ('%s livro%s renovado%s' %
+             (str(total_renewed) if total_renewed > 0 else 'Nenhum',
+             's' if total_renewed > 1 else '', 's' if total_renewed > 1 else ''))
+    if split_result: return_list.append(total)
 
-def renewed_to_string(renewed):
+    date = ('Data mais próxima para devolução: %s' %
+            datetime.strftime(next_renewal, '%d/%m/%Y'))
+    if split_result: return_list.append(date)
+
+    return return_list if split_result else result + total + '. ' + date + '.'
+
+def renewed_to_string(renewed, split_result=False):
     if renewed['result']:
-        return books_to_string(renewed['result'])
+        return books_to_string(renewed['result'], split_result)
     else:
         return (renewed['response']['message'])
