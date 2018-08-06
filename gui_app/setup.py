@@ -4,7 +4,7 @@ from cx_Freeze import setup, Executable
 
 __version__ = '1.0.0'
 
-include_files = ['logo.png']
+include_files = []
 excludes = []
 packages = ['queue', 'multiprocessing', 'minervaboto', 'os', 'sys', 'wxPython']
 
