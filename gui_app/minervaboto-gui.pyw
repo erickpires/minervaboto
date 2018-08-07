@@ -314,6 +314,8 @@ class LoginWindow(wx.Frame):
         self.process = None
         self.queue = Queue()
 
+        self.SetStatusBar(StatusBar(self))
+
         self.panel = wx.Panel(self)
 
         sizer = wx.GridBagSizer(5, 5)
@@ -356,14 +358,10 @@ class LoginWindow(wx.Frame):
 
         vbox = wx.BoxSizer(wx.VERTICAL)
         self.panel.Sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.panel.Sizer.Add(sizer, flag=wx.CENTER | wx.BOTTOM | wx.EXPAND,
-                             border=30 if wx.Platform == '__WXMSW__' else 0)
+        self.panel.Sizer.Add(sizer, flag=wx.CENTER | wx.BOTTOM | wx.EXPAND)
         vbox.Add(self.panel, flag=wx.CENTER)
         self.SetSizer(vbox)
         self.panel.Sizer.Fit(self)
-
-        self.status = StatusBar(self)
-        self.SetStatusBar(self.status)
 
         self.Show(True)
         self.Bind(wx.EVT_CLOSE, self.OnWindowClose)
@@ -379,7 +377,7 @@ class LoginWindow(wx.Frame):
         for child in self.panel.GetChildren():
             if not isinstance(child, wx.StaticBitmap):
                 child.Disable()
-        self.status.gauge.Show(True)
+        self.GetStatusBar().gauge.Show(True)
 
         self.process = RenewTask(self.queue, self.input_id.GetValue(),
                                  self.input_pass.GetValue())
@@ -394,7 +392,7 @@ class LoginWindow(wx.Frame):
         result = self.queue.get(0)
         if 'status' in result:
             self.SetStatusText(result['status'], 0)
-            self.status.gauge.SetValue(result['progress'])
+            self.GetStatusBar().gauge.SetValue(result['progress'])
             wx.CallLater(15, self.OnTimer)
             return
 
@@ -408,8 +406,8 @@ class LoginWindow(wx.Frame):
         for child in self.panel.GetChildren():
             if not isinstance(child, wx.StaticBitmap):
                 child.Enable()
-        self.status.gauge.Show(False)
-        self.status.gauge.SetValue(0)
+        self.GetStatusBar().gauge.Show(False)
+        self.GetStatusBar().gauge.SetValue(0)
         self.SetStatusText(utils.get_module_version('minervaboto'), 0)
 
         if renewed['result']:
@@ -423,7 +421,7 @@ class LoginWindow(wx.Frame):
             else:
                 icon = wx.ICON_ERROR
             dialog = wx.MessageDialog(self, renewed['response']['message'],
-                                      'Renovação', wx.OK | wx.CENTRE | icon)
+                                      'Erro', wx.OK | wx.CENTRE | icon)
 
         dialog.CenterOnParent(wx.BOTH)
         dialog.ShowModal()
